@@ -35,9 +35,15 @@ defmodule PiGlow.LED do
     ]
   end
 
-  def gamma_correct(0), do: 0
+  def gamma_correct(int_or_float)
+  def gamma_correct(0.0), do: 0
 
-  def gamma_correct(v) when is_integer(v) do
-    Float.pow(255.0, v / 255) |> round()
+  def gamma_correct(i) when is_integer(i) and i >= 0 and i <= 255 do
+    gamma_correct(i / 255)
+  end
+
+  def gamma_correct(f) when is_float(f) and f >= 0.0 and f <= 1.0 do
+    Float.pow(255.0, f)
+    |> round()
   end
 end
