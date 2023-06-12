@@ -1,5 +1,5 @@
 defmodule PiGlow do
-  use GenServer
+  use GenServer, restart: :transient
   alias Circuits.I2C
 
   @bus_addr 0x54
@@ -34,6 +34,14 @@ defmodule PiGlow do
     |> set_leds(pid)
   end
 
+  def wait(timeout \\ 60_000, pid \\ __MODULE__) do
+    GenServer.call(pid, :wait, timeout)
+  end
+
+  def stop(timeout \\ 60_000, pid \\ __MODULE__) do
+    GenServer.stop(pid, :normal, timeout)
+  end
+
   @impl true
   def init(_) do
     {:ok, bus} = I2C.open("i2c-1")
@@ -49,6 +57,11 @@ defmodule PiGlow do
     :ok = I2C.write(bus, @bus_addr, <<@cmd_set_pwm_values>> <> bytes)
     :ok = update(bus)
     {:noreply, bus}
+  end
+
+  @impl true
+  def handle_call(:wait, _from, bus) do
+    {:reply, :ok, bus}
   end
 
   @impl true
