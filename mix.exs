@@ -6,6 +6,7 @@ defmodule PiGlow.MixProject do
       app: :pi_glow,
       version: "0.1.0",
       elixir: "~> 1.14",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -19,6 +20,9 @@ defmodule PiGlow.MixProject do
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
@@ -27,8 +31,7 @@ defmodule PiGlow.MixProject do
       {:circuits_i2c, "~> 1.0"},
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:ex_git_test, "~> 0.1.2", only: [:dev, :test], runtime: false},
-      {:mock, "~> 0.3.0", only: :test}
+      {:ex_git_test, "~> 0.1.2", only: [:dev, :test], runtime: false}
     ]
   end
 end

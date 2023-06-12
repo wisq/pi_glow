@@ -1,6 +1,6 @@
 defmodule PiGlow do
   use GenServer, restart: :transient
-  alias Circuits.I2C
+  use PiGlow.AliasI2C
 
   @bus_addr 0x54
   @cmd_enable_output 0x00
