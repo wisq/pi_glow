@@ -206,6 +206,50 @@ defmodule PiGlowTest do
     end
   end
 
+  describe "map_enable_and_power/1" do
+    setup [:start]
+
+    test "calls given function for every LED", %{pid: pid} do
+      me = self()
+
+      PiGlow.map_enable_and_power(
+        fn led ->
+          send(me, {:led, led})
+          {true, 255}
+        end,
+        pid
+      )
+
+      PiGlow.LED.leds()
+      |> Enum.each(fn led ->
+        assert_receive {:led, ^led}
+      end)
+
+      refute_receive {:led, _}
+    end
+
+    test "sets LED power based on result of function call", %{pid: pid} do
+      fun = fn led ->
+        ena = led.ring in 2..4
+        pow = led.ring * 5 + led.arm
+        {ena, pow}
+      end
+
+      PiGlow.map_enable_and_power(fun, pid)
+      PiGlow.wait(1_000, pid)
+
+      assert [
+               {0x54, <<0x13, enable::binary>>},
+               {0x54, <<0x01, power::binary>>},
+               {0x54, <<0x16, 0xFF>>}
+             ] = MockI2C.get_device(pid).writes
+
+      # Enabled LED indices: [3, 4, 5, 6, 9, 12, 14, 15, 16]
+      assert enable == <<0b001111, 0b001001, 0b011100>>
+      assert power == <<33, 28, 23, 18, 11, 16, 31, 26, 21, 6, 7, 12, 8, 17, 13, 22, 27, 32>>
+    end
+  end
+
   defp start(_ctx) do
     assert {:ok, pid} = PiGlow.start_link(name: nil)
     assert i2c = MockI2C.reset_writes(pid)

@@ -61,6 +61,12 @@ defmodule PiGlow do
     |> set_power(pid)
   end
 
+  def map_enable_and_power(fun, pid \\ __MODULE__) when is_function(fun) do
+    @leds
+    |> Enum.map(fun)
+    |> set_enable_and_power(pid)
+  end
+
   def wait(timeout \\ 60_000, pid \\ __MODULE__) do
     GenServer.call(pid, :wait, timeout)
   end
