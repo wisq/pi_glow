@@ -57,7 +57,7 @@ defmodule PiGlowTest do
                {0x54, <<0x16, 0xFF>>}
              ] = MockI2C.get_device(pid).writes
 
-      assert :erlang.binary_to_list(values_bin) == [0b101010, 0b111111, 0b011001]
+      assert values_bin == <<42, 63, 25>>
     end
   end
 
@@ -85,6 +85,53 @@ defmodule PiGlowTest do
              ] = MockI2C.get_device(pid).writes
 
       assert :erlang.binary_to_list(values_bin) == values
+    end
+  end
+
+  describe "set_enable_and_power/1" do
+    setup [:start]
+
+    test "sets LED on/off and power to given binary values", %{pid: pid} do
+      PiGlow.set_enable_and_power({<<0x12, 0x23, 0x34>>, "arbitraryPWMvalues"}, pid)
+      PiGlow.wait(1_000, pid)
+
+      assert MockI2C.get_device(pid).writes == [
+               {0x54, <<0x13, 0x12, 0x23, 0x34>>},
+               {0x54, <<0x01, "arbitraryPWMvalues">>},
+               {0x54, <<0x16, 0xFF>>}
+             ]
+    end
+
+    test "sets LED on/off and power to given values as list of tuples", %{pid: pid} do
+      values =
+        [
+          # Byte 1: 0b100110 = 38
+          [true: 104, false: 242, false: 173, true: 228, true: 236, false: 164],
+          # Byte 2: 0b010011 = 19
+          [false: 227, true: 104, false: 8, false: 222, true: 223, true: 29],
+          # Byte 3: 0b111101 = 61
+          [true: 255, true: 67, true: 119, true: 10, false: 115, true: 252]
+        ]
+        |> List.flatten()
+
+      PiGlow.set_enable_and_power(values, pid)
+      PiGlow.wait(1_000, pid)
+
+      assert [
+               {0x54, <<0x13, enable::binary>>},
+               {0x54, <<0x01, power::binary>>},
+               {0x54, <<0x16, 0xFF>>}
+             ] = MockI2C.get_device(pid).writes
+
+      assert enable == <<38, 19, 61>>
+
+      assert power ==
+               [
+                 <<104, 242, 173, 228, 236, 164>>,
+                 <<227, 104, 8, 222, 223, 29>>,
+                 <<255, 67, 119, 10, 115, 252>>
+               ]
+               |> Enum.join("")
     end
   end
 

@@ -18,30 +18,35 @@ defmodule PiGlow do
     GenServer.start_link(__MODULE__, nil, opts)
   end
 
-  def set_enable(values, pid \\ __MODULE__)
-
-  def set_enable(<<bytes::binary-size(@enable_bytes)>>, pid) do
-    GenServer.cast(pid, {:set_enable, bytes})
+  def set_enable(values, pid \\ __MODULE__) do
+    GenServer.cast(pid, {:set_enable, to_enable_binary(values)})
   end
 
-  def set_enable(list, pid) when is_list(list) do
+  defp to_enable_binary(<<binary::binary-size(@enable_bytes)>>), do: binary
+
+  defp to_enable_binary(list) when is_list(list) do
     list
     |> Enum.chunk_every(@enable_chunk_size)
     |> Enum.map(&bools_to_bits/1)
     |> :erlang.list_to_binary()
-    |> set_enable(pid)
   end
 
-  def set_power(values, pid \\ __MODULE__)
-
-  def set_power(<<bytes::binary-size(18)>>, pid) do
-    GenServer.cast(pid, {:set_power, bytes})
+  def set_power(values, pid \\ __MODULE__) do
+    GenServer.cast(pid, {:set_power, to_power_binary(values)})
   end
 
-  def set_power(list, pid) when is_list(list) do
-    list
-    |> :erlang.list_to_binary()
-    |> set_power(pid)
+  defp to_power_binary(<<binary::binary-size(@led_count)>>), do: binary
+  defp to_power_binary(list) when is_list(list), do: list |> :erlang.list_to_binary()
+
+  def set_enable_and_power(list_or_tuple, pid \\ __MODULE__)
+
+  def set_enable_and_power({enable, power}, pid) do
+    GenServer.cast(pid, {:set_enable_and_power, to_enable_binary(enable), to_power_binary(power)})
+  end
+
+  def set_enable_and_power([{_, _} | _] = list, pid) do
+    Enum.unzip(list)
+    |> set_enable_and_power(pid)
   end
 
   def map_enable(fun, pid \\ __MODULE__) when is_function(fun) do
@@ -82,6 +87,18 @@ defmodule PiGlow do
   @impl true
   def handle_cast({:set_power, <<bytes::binary-size(@led_count)>>}, bus) do
     :ok = I2C.write(bus, @bus_addr, <<@cmd_set_pwm_values>> <> bytes)
+    :ok = update(bus)
+    {:noreply, bus}
+  end
+
+  @impl true
+  def handle_cast(
+        {:set_enable_and_power, <<enable::binary-size(@enable_bytes)>>,
+         <<power::binary-size(@led_count)>>},
+        bus
+      ) do
+    :ok = I2C.write(bus, @bus_addr, <<@cmd_enable_leds>> <> enable)
+    :ok = I2C.write(bus, @bus_addr, <<@cmd_set_pwm_values>> <> power)
     :ok = update(bus)
     {:noreply, bus}
   end
