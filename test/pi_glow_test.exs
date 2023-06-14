@@ -2,43 +2,70 @@ defmodule PiGlowTest do
   use ExUnit.Case, async: true
 
   describe "start_link/1" do
-    test "opens device and enables LEDs" do
+    test "opens I2C device and enables I2C writing" do
       assert {:ok, pid} = PiGlow.start_link(name: nil)
 
       assert i2c = MockI2C.get_device(pid)
       assert i2c.device == "i2c-1"
-
-      assert i2c.writes == [
-               {0x54, <<0, 1>>},
-               {0x54, <<0x13, 0x3F, 0x3F, 0x3F>>},
-               {0x54, <<0x16, 0xFF>>}
-             ]
+      assert i2c.writes == [{0x54, <<0, 1>>}]
     end
   end
 
   describe "stop/0" do
     setup [:start]
 
-    test "disables LEDs and closes I2C", %{pid: pid, i2c: i2c} do
+    test "closes I2C", %{pid: pid, i2c: i2c} do
       assert !i2c.closed
 
       PiGlow.stop(1_000, pid)
       assert i2c = MockI2C.wait_for_close(i2c.ref)
-
-      assert i2c.writes == [
-               {0x54, <<0x13, 0, 0, 0>>},
-               {0x54, <<0x16, 0xFF>>}
-             ]
-
+      assert i2c.writes == []
       assert i2c.closed
     end
   end
 
-  describe "set_leds/1" do
+  describe "set_enable/1" do
     setup [:start]
 
-    test "sets LEDs to given binary values", %{pid: pid} do
-      PiGlow.set_leds("eighteenbytebinary", pid)
+    test "sets LED on/off status to given binary values", %{pid: pid} do
+      PiGlow.set_enable(<<0x11, 0x22, 0x33>>, pid)
+      PiGlow.wait(1_000, pid)
+
+      assert MockI2C.get_device(pid).writes == [
+               {0x54, <<0x13, 0x11, 0x22, 0x33>>},
+               {0x54, <<0x16, 0xFF>>}
+             ]
+    end
+
+    test "sets LED on/off status to given values as list", %{pid: pid} do
+      values =
+        [
+          # Byte 1: 0b101010 = 42
+          [true, false, true, false, true, false],
+          # Byte 2: 0b111111 = 63
+          [true, true, true, true, true, true],
+          # Byte 3: 0b011001 = 25
+          [false, true, true, false, false, true]
+        ]
+        |> List.flatten()
+
+      PiGlow.set_enable(values, pid)
+      PiGlow.wait(1_000, pid)
+
+      assert [
+               {0x54, <<0x13, values_bin::binary>>},
+               {0x54, <<0x16, 0xFF>>}
+             ] = MockI2C.get_device(pid).writes
+
+      assert :erlang.binary_to_list(values_bin) == [0b101010, 0b111111, 0b011001]
+    end
+  end
+
+  describe "set_power/1" do
+    setup [:start]
+
+    test "sets LED power to given binary values", %{pid: pid} do
+      PiGlow.set_power("eighteenbytebinary", pid)
       PiGlow.wait(1_000, pid)
 
       assert MockI2C.get_device(pid).writes == [
@@ -47,9 +74,9 @@ defmodule PiGlowTest do
              ]
     end
 
-    test "sets LEDs to given values as list", %{pid: pid} do
+    test "sets LED power to given values as list", %{pid: pid} do
       values = 0..255 |> Enum.shuffle() |> Enum.take(18)
-      PiGlow.set_leds(values, pid)
+      PiGlow.set_power(values, pid)
       PiGlow.wait(1_000, pid)
 
       assert [
@@ -61,13 +88,49 @@ defmodule PiGlowTest do
     end
   end
 
-  describe "map_leds/1" do
+  describe "map_enable/1" do
     setup [:start]
 
     test "calls given function for every LED", %{pid: pid} do
       me = self()
 
-      PiGlow.map_leds(
+      PiGlow.map_enable(
+        fn led ->
+          send(me, {:led, led})
+          true
+        end,
+        pid
+      )
+
+      PiGlow.LED.leds()
+      |> Enum.each(fn led ->
+        assert_receive {:led, ^led}
+      end)
+
+      refute_receive {:led, _}
+    end
+
+    test "sets LED enable based on result of function call", %{pid: pid} do
+      PiGlow.map_enable(fn led -> led.colour in [:red, :amber] end, pid)
+      PiGlow.wait(1_000, pid)
+
+      assert [
+               {0x54, <<0x13, values::binary>>},
+               {0x54, <<0x16, 0xFF>>}
+             ] = MockI2C.get_device(pid).writes
+
+      # Enabled LED indices: [1, 3, 7, 9, 16, 18]
+      assert values == <<0b101000, 0b101000, 0b000101>>
+    end
+  end
+
+  describe "map_power/1" do
+    setup [:start]
+
+    test "calls given function for every LED", %{pid: pid} do
+      me = self()
+
+      PiGlow.map_power(
         fn led ->
           send(me, {:led, led})
           0
@@ -83,8 +146,8 @@ defmodule PiGlowTest do
       refute_receive {:led, _}
     end
 
-    test "sets LEDs based on result of function call", %{pid: pid} do
-      PiGlow.map_leds(fn led -> led.arm * 10 + led.ring end, pid)
+    test "sets LED power based on result of function call", %{pid: pid} do
+      PiGlow.map_power(fn led -> led.arm * 10 + led.ring end, pid)
       PiGlow.wait(1_000, pid)
 
       assert [
