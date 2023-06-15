@@ -1,4 +1,6 @@
 #
+# Plays a few patterns in sequence.
+#
 # Run this using `mix run examples/demo.exs`
 #
 
@@ -14,10 +16,13 @@ short_pulse =
   |> Enum.flat_map(& &1)
   |> Enum.map(&PiGlow.LED.gamma_correct/1)
 
+# Turn on all the LEDs:
+PiGlow.map_enable_and_power(fn _ -> {true, 0} end)
+
 # Do three long pulses of all the LEDs at once:
 1..3
 |> Enum.flat_map(fn _ -> long_pulse end)
-|> Enum.each(fn v -> PiGlow.map_leds(fn _led -> v end) end)
+|> Enum.each(fn v -> PiGlow.map_power(fn _led -> v end) end)
 
 # Do short pulses by ring -- outside to inside, back to outside -- repeated three times:
 [6..1, 2..6, 5..1, 2..6, 5..1, 2..6]
@@ -25,7 +30,7 @@ short_pulse =
 |> Enum.each(fn ring ->
   short_pulse
   |> Enum.map(fn v ->
-    PiGlow.map_leds(fn
+    PiGlow.map_power(fn
       %LED{ring: ^ring} -> v
       _ -> 0
     end)
@@ -38,7 +43,7 @@ end)
 |> Enum.each(fn arm ->
   short_pulse
   |> Enum.map(fn v ->
-    PiGlow.map_leds(fn
+    PiGlow.map_power(fn
       %LED{arm: ^arm} -> v
       _ -> 0
     end)
@@ -54,10 +59,8 @@ end)
 # they were when we exited.
 #
 # Let's set all the LEDs to off, and wait for the process to catch up:
-PiGlow.map_leds(fn _ -> 0 end)
+PiGlow.map_enable(fn _ -> false end)
 IO.puts("All events sent, waiting for completion.")
-PiGlow.wait()
 
-# And then let's shut it down cleanly, which will also fully disable the the
-# LEDs, rather than just using a PWM setting of zero:
-PiGlow.stop()
+# Note that we could also run PiGlow.stop() here instead, since we're exiting anyway.
+PiGlow.wait()
