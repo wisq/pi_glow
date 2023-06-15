@@ -5,7 +5,7 @@ defmodule PiGlowDocTest do
   doctest PiGlow
 
   defp start(_ctx) do
-    assert {:ok, _} = PiGlow.start_link()
+    assert {:ok, _pid} = start_supervised(PiGlow)
     []
   end
 end
@@ -24,7 +24,7 @@ defmodule PiGlowTest do
   end
 
   describe "stop/0" do
-    setup [:start]
+    setup :start
 
     test "closes I2C", %{pid: pid, i2c: i2c} do
       assert !i2c.closed
@@ -37,7 +37,7 @@ defmodule PiGlowTest do
   end
 
   describe "set_enable/1" do
-    setup [:start]
+    setup :start
 
     test "sets LED on/off status to given binary values", %{pid: pid} do
       PiGlow.set_enable(<<0x11, 0x22, 0x33>>, pid)
@@ -74,7 +74,7 @@ defmodule PiGlowTest do
   end
 
   describe "set_power/1" do
-    setup [:start]
+    setup :start
 
     test "sets LED power to given binary values", %{pid: pid} do
       PiGlow.set_power("eighteenbytebinary", pid)
@@ -263,7 +263,7 @@ defmodule PiGlowTest do
   end
 
   defp start(_ctx) do
-    assert {:ok, pid} = PiGlow.start_link(name: nil)
+    assert {:ok, pid} = start_supervised({PiGlow, name: nil})
     assert i2c = MockI2C.reset_writes(pid)
     [pid: pid, i2c: i2c, ref: i2c.ref]
   end
