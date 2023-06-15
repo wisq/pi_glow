@@ -1,4 +1,6 @@
 defmodule PiGlow.AliasI2C do
+  @moduledoc false
+
   defmacro __using__(_opts) do
     module = Application.get_env(:pi_glow, :i2c_module, Circuits.I2C)
 
