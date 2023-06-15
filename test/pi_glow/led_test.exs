@@ -1,5 +1,6 @@
 defmodule PiGlow.LEDTest do
   use ExUnit.Case, async: true
+  doctest PiGlow.LED
 
   alias PiGlow.LED
 

@@ -278,10 +278,10 @@ defmodule PiGlow do
 
       # Set the first arm to max brightness, the second to medium, the third to minimum.
       iex> PiGlow.map_power(fn
-        %{arm: 1} -> 255,
-        %{arm: 2} -> 125,
-        %{arm: 3} -> 1
-      end)
+      ...>   %{arm: 1} -> 255
+      ...>   %{arm: 2} -> 125
+      ...>   %{arm: 3} -> 1
+      ...> end)
       :ok
   """
   @spec map_power((PiGlow.LED.t() -> integer), pid) :: :ok
@@ -307,10 +307,10 @@ defmodule PiGlow do
 
       # Enable red LEDs at max brightness, amber at min brightness, disable the rest.
       iex> PiGlow.map_enable_and_power(fn
-        %{colour: :red} -> {true, 255}
-        %{colour: :amber} -> {true, 1}
-        _ -> {false, 0}
-      end)
+      ...>   %{colour: :red} -> {true, 255}
+      ...>   %{colour: :amber} -> {true, 1}
+      ...>   _ -> {false, 0}
+      ...> end)
       :ok
   """
   @spec map_enable_and_power((PiGlow.LED.t() -> {boolean, integer}), pid) :: :ok
@@ -334,11 +334,11 @@ defmodule PiGlow do
 
       # Pulse all lights once:
       iex> [0..255, 255..0] |>
-        Enum.flat_map(&Enum.to_list/1) |>
-        Enum.map(&PiGlow.LED.gamma_correct/1) |>
-        Enum.each(fn value ->
-          PiGlow.map_power(fn _ -> value end)
-        end)
+      ...>   Enum.flat_map(&Enum.to_list/1) |>
+      ...>   Enum.map(&PiGlow.LED.gamma_correct/1) |>
+      ...>   Enum.each(fn value ->
+      ...>     PiGlow.map_power(fn _ -> value end)
+      ...>   end)
       :ok
 
       # Wait for those 512 events to all be processed:

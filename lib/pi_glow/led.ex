@@ -110,11 +110,11 @@ defmodule PiGlow.LED do
 
       # Pulse all lights once:
       iex> [0..255, 255..0] |>
-        Enum.flat_map(&Enum.to_list/1) |>
-        Enum.map(&PiGlow.LED.gamma_correct/1) |>
-        Enum.each(fn value ->
-          PiGlow.map_power(fn _ -> value end)
-        end)
+      ...>   Enum.flat_map(&Enum.to_list/1) |>
+      ...>   Enum.map(&PiGlow.LED.gamma_correct/1) |>
+      ...>   Enum.each(fn value ->
+      ...>     PiGlow.map_power(fn _ -> value end)
+      ...>   end)
       :ok
   """
   @spec gamma_correct(0..255 | float) :: 0..255

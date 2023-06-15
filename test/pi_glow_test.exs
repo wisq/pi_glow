@@ -1,3 +1,15 @@
+defmodule PiGlowDocTest do
+  use ExUnit.Case, async: false
+
+  setup :start
+  doctest PiGlow
+
+  defp start(_ctx) do
+    assert {:ok, _} = PiGlow.start_link()
+    []
+  end
+end
+
 defmodule PiGlowTest do
   use ExUnit.Case, async: true
 
