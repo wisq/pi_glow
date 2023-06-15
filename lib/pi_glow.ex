@@ -1,4 +1,7 @@
 defmodule PiGlow do
+  require Logger
+  @log_prefix "[#{inspect(__MODULE__)}] "
+
   @leds PiGlow.LED.leds() |> Enum.sort_by(& &1.index)
   @led_count 18 = Enum.count(@leds)
   @enable_chunk_size 6
@@ -378,11 +381,21 @@ defmodule PiGlow do
   # --- Internal functions ---
 
   @impl true
-  def init(bus_id) when bus_id in 1..10 do
-    {:ok, bus} = I2C.open("i2c-#{bus_id}")
-    spawn_cleanup(bus)
-    :ok = I2C.write(bus, @bus_addr, <<@cmd_enable_output, 1>>)
-    {:ok, bus}
+  def init(bus_id) when bus_id in 0..99 do
+    case I2C.open("i2c-#{bus_id}") do
+      {:ok, bus} ->
+        spawn_cleanup(bus)
+        :ok = I2C.write(bus, @bus_addr, <<@cmd_enable_output, 1>>)
+        {:ok, bus}
+
+      {:error, :bus_not_found} ->
+        Logger.error(@log_prefix <> "I2C bus not found: /dev/i2c-#{bus_id}")
+        :ignore
+
+      {:error, err} ->
+        Logger.error(@log_prefix <> "Unknown error opening I2C bus #{bus_id}: #{inspect(err)}")
+        :ignore
+    end
   end
 
   @impl true

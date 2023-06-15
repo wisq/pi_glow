@@ -23,6 +23,10 @@ defmodule MockI2C do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
+  def open("i2c-99") do
+    {:error, :bus_not_found}
+  end
+
   def open(device) do
     GenServer.call(__MODULE__, {:open, self(), device})
   end

@@ -12,6 +12,7 @@ end
 
 defmodule PiGlowTest do
   use ExUnit.Case, async: true
+  import ExUnit.CaptureLog
 
   describe "start_link/1" do
     test "opens I2C device and enables I2C writing" do
@@ -20,6 +21,11 @@ defmodule PiGlowTest do
       assert i2c = MockI2C.get_device(pid)
       assert i2c.device == "i2c-1"
       assert i2c.writes == [{0x54, <<0, 1>>}]
+    end
+
+    test "shuts down if I2C bus is not found" do
+      assert {:ignore, log} = with_log(fn -> PiGlow.start_link(name: nil, bus: 99) end)
+      assert log =~ ~r{error .* PiGlow .* /dev/i2c-9}x
     end
   end
 
