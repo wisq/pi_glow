@@ -1,6 +1,8 @@
 defmodule PiGlow.MixProject do
   use Mix.Project
 
+  @github_url "https://github.com/wisq/pi_glow"
+
   def project do
     [
       app: :pi_glow,
@@ -8,7 +10,11 @@ defmodule PiGlow.MixProject do
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      description: description(),
+      package: package(),
+      docs: docs(),
+      deps: deps(),
+      source_url: @github_url
     ]
   end
 
@@ -17,6 +23,31 @@ defmodule PiGlow.MixProject do
     [
       extra_applications: [:logger],
       mod: {PiGlow.Application, []}
+    ]
+  end
+
+  defp description do
+    """
+    PiGlow is a library for controlling a "PiGlow" LED array device.
+    """
+  end
+
+  defp package do
+    [
+      files: ["lib", "mix.exs", "README.md", "CHANGELOG.md", "LICENSE"],
+      maintainers: ["Adrian Irving-Beer"],
+      licenses: ["MIT"],
+      links: %{GitHub: @github_url}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: [
+        "README.md",
+        "CHANGELOG.md"
+      ]
     ]
   end
 
